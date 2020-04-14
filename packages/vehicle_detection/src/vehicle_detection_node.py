@@ -4,8 +4,8 @@ import cv2
 import rospy
 from cv_bridge import CvBridge
 from duckietown import DTROS
-from sensor_msgs.msg import CompressedImage, Image
 
+from sensor_msgs.msg import CompressedImage, Image
 from duckietown_msgs.msg import BoolStamped, VehicleCorners
 from geometry_msgs.msg import Point32
 
@@ -13,7 +13,6 @@ from geometry_msgs.msg import Point32
 class VehicleDetectionNode(DTROS):
 
     def __init__(self, node_name):
-
         # Initialize the DTROS parent class
         super(VehicleDetectionNode, self).__init__(node_name=node_name)
 
@@ -24,7 +23,6 @@ class VehicleDetectionNode(DTROS):
         self.parameters['~blobdetector_min_dist_between_blobs'] = None
         self.updateParameters()
 
-
         self.bridge = CvBridge()
 
         self.last_stamp = rospy.Time.now()
@@ -33,7 +31,6 @@ class VehicleDetectionNode(DTROS):
         self.sub_image = self.subscriber("~image", CompressedImage, self.cbImage, queue_size=1)
 
         # Publishers
-        # self.pub_detection = self.publisher("~detection", BoolStamped, queue_size=1)
         self.pub_centers = self.publisher("~centers", VehicleCorners, queue_size=1)
         self.pub_circlepattern_image = self.publisher("~debug/detection_image/compressed", CompressedImage, queue_size=1)
 
@@ -54,7 +51,6 @@ class VehicleDetectionNode(DTROS):
         else:
             self.last_stamp = now
         
-        # vehicle_detected_msg_out = BoolStamped()
         vehicle_centers_msg_out = VehicleCorners()
         image_cv = self.bridge.compressed_imgmsg_to_cv2(image_msg, "bgr8")
 
@@ -64,10 +60,6 @@ class VehicleDetectionNode(DTROS):
                                                    blobDetector=self.simple_blob_detector)
 
         # if the pattern is detected, cv2.findCirclesGrid returns a non-zero result, otherwise it returns 0
-        # vehicle_detected_msg_out.data = detection > 0
-        # self.pub_detection.publish(vehicle_detected_msg_out)
-
-        #print(centers)
 
         vehicle_centers_msg_out.header = image_msg.header
         vehicle_centers_msg_out.detection.data = detection > 0
@@ -88,10 +80,8 @@ class VehicleDetectionNode(DTROS):
 
         self.pub_centers.publish(vehicle_centers_msg_out)
 
-        # TODO: Add check if subscribed
-        if True:
-            cv2.drawChessboardCorners(image_cv,
-                                        tuple(self.parameters['~circlepattern_dims']), centers, detection)
+        if self.pub_circlepattern_image.get_num_connections() > 0:
+            cv2.drawChessboardCorners(image_cv, tuple(self.parameters['~circlepattern_dims']), centers, detection)
             image_msg_out = self.bridge.cv2_to_compressed_imgmsg(image_cv)
             self.pub_circlepattern_image.publish(image_msg_out)
 
